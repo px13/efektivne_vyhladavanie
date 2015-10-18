@@ -1,0 +1,1 @@
+# efektivne_vyhladavanie
