@@ -1,244 +1,132 @@
-#include <iostream>
-#include <seqan/sequence.h>
-#include <seqan/basic.h>
-#include <seqan/index.h>
-#include <seqan/seq_io.h>
-#include <list>
-#include <map>
+#include "io_tool.h"
+#include "xy_index.h"
+#include "fm_index.h"
+#include "hash_table.h"
 #include <chrono>
-#include <stdlib.h>
+#include "windows.h"
+#include "psapi.h"
 
-using namespace seqan;
-using namespace std;
-using namespace chrono;
-
-int N = 32;
-int M = 13;
-int N_MINUS_M = N - M;
-
-typedef Infix<DnaString>::Type  DnaInfix;
-
-DnaInfix findMinSegmentOfLengthM(DnaString &in, int begin, const int end)
+void printTestResults(seqan::CharString algoritmus, long pocet, int memoryUsed, int preprocessTime, int searchingTime)
 {
-	DnaInfix minSegment = infixWithLength(in, begin, M);
-	for (begin = begin + 1; begin + M <= end; begin++)
+	cout << algoritmus << " - Done" << endl;
+	cout << "Number of results: " << pocet << endl;
+	cout << "Memory used: " << memoryUsed << " B" << endl;
+	cout << "Preprocess time: " << preprocessTime << " ms" << endl;
+	cout << "Average searching time: " << searchingTime << " ms" << endl;
+	cout << "--------------------" << endl;
+}
+
+long pocetPrvkov(list<list<int>> &pole)
+{
+	long result = 0;
+	for (list<list<int>>::iterator iter = pole.begin(); iter != pole.end(); iter++)
 	{
-		minSegment = min(infixWithLength(in, begin, M), minSegment);
+		result += (*iter).size();
 	}
-	return minSegment;
+	return result;
 }
 
-void addSegmentToMap(multimap<DnaString, int> &m, const Segment<DnaString> &segment)
+list<list<int>> testXYIndex(seqan::DnaString &in, list<seqan::DnaString> &queries, int pocetTestovani)
 {
-	m.insert(pair<DnaString, int>(segment, segment.data_begin_position));
-}
+	list<list<int>> out;
+	chrono::milliseconds ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
 
-multimap<DnaString, int> getMapWithMinSegments(DnaString &in)
-{
-	multimap<DnaString, int> m;
-	DnaInfix lastMinSegment = findMinSegmentOfLengthM(in, 0, N);
-	addSegmentToMap(m, lastMinSegment);
-	for (int i = N_MINUS_M + 1; i + M <= length(in); i++)
-	{
-		if (lastMinSegment.data_begin_position < i - N_MINUS_M)
-		{
-			lastMinSegment = findMinSegmentOfLengthM(in, i - N_MINUS_M, i + M);
-			addSegmentToMap(m, lastMinSegment);
-		}
-		else
-		{
-			DnaInfix segment = infixWithLength(in, i, M);
-			if (isLess(segment, lastMinSegment))
-			{
-				lastMinSegment = segment;
-				addSegmentToMap(m, lastMinSegment);
-			}
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	SIZE_T memoryUsed = pmc.WorkingSetSize;
 
-		}
-	}
-	return m;
-}
+	XYIndex index(in);
+	index.prepare();
 
-bool isCorrect(DnaString &in, DnaString &query, int beginSegment, DnaInfix &queryMinSegment)
-{
-	return (isEqual(infixWithLength(query, 0, queryMinSegment.data_begin_position),
-					infixWithLength(in, beginSegment - queryMinSegment.data_begin_position, queryMinSegment.data_begin_position)
-					)
-			&&
-			isEqual(infixWithLength(query, queryMinSegment.data_end_position, N - queryMinSegment.data_end_position),
-					infixWithLength(in, beginSegment + M, N - queryMinSegment.data_end_position)
-					)
-			);
-}
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	memoryUsed = pmc.WorkingSetSize - memoryUsed;
 
-void findQuery(DnaString &in, DnaString &query, multimap<DnaString, int> &m, list<int> &out)
-{
-	DnaInfix queryMinSegment = findMinSegmentOfLengthM(query, 0, N);
-	pair<multimap<DnaString, int>::iterator, multimap<DnaString, int>::iterator> mapIteratorPair = m.equal_range(queryMinSegment);
-	for (multimap<DnaString, int>::iterator mapIterator = mapIteratorPair.first; mapIterator != mapIteratorPair.second; ++mapIterator)
-	{
-		if (isCorrect(in, query, (*mapIterator).second, queryMinSegment))
-			out.push_back( (*mapIterator).second - queryMinSegment.data_begin_position);
-	}
-}
-
-list<int> findQueries(DnaString &in, list<DnaString> &queries)
-{
-	list<int> out;
-	multimap<DnaString, int> m = getMapWithMinSegments(in);
-	for (list<DnaString>::iterator listIterator = queries.begin(); listIterator != queries.end(); listIterator++)
-	{
-		findQuery(in, *listIterator, m, out);
-	}
-	return out;
-}
-
-void printTestResults(CharString algoritmus, int vysledok, int time)
-{
-	cout << algoritmus << " - Hotovo" << endl;
-	cout << "Pocet vyskytov dotazov: " << vysledok << endl;
-	cout << "Priemerny cas: " << time << "ms" << endl;
-}
-
-list<int> findQueriesTest(DnaString &in, list<DnaString> &queries, int pocetTestovani)
-{
-	list<int> out;
-	multimap<DnaString, int> m = getMapWithMinSegments(in);
-	milliseconds ms = duration_cast< milliseconds >(
-		system_clock::now().time_since_epoch()
-		);
+	chrono::milliseconds ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	int preprocessTime = (ms2 - ms).count();
+	ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
 	for (int i = 0; i < pocetTestovani; i++)
 	{
-		for (list<DnaString>::iterator listIterator = queries.begin(); listIterator != queries.end(); listIterator++)
-		{
-			findQuery(in, *listIterator, m, out);
-		}
+		index.query(queries, out);
 	}
-	milliseconds ms2 = duration_cast< milliseconds >(
-		system_clock::now().time_since_epoch()
-		);
-	printTestResults("Moj algoritmus", out.size(), (ms2 - ms).count() / 10);
+	ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	printTestResults("XY-Index", pocetPrvkov(out), memoryUsed, preprocessTime, (ms2 - ms).count() / 10);
 	return out;
 }
 
-list<int> testFMIndex(DnaString in, list<DnaString> queries, int pocetTestovani)
+list<list<int>> testFMIndex(seqan::DnaString &in, list<seqan::DnaString> &queries, int pocetTestovani)
 {
-	Index<DnaString, FMIndex<> > fmIndex(in);
-	Finder<Index<DnaString, FMIndex<> > > fmFinder(fmIndex);
-	while (find(fmFinder, "AAAAAAAAAA")) { position(fmFinder); } // donutenie vytvorenia indexu pred zacatim merania casu
-	list<int> out;
-	milliseconds ms = duration_cast< milliseconds >(
-		system_clock::now().time_since_epoch()
-		);
+	list<list<int>> out;
+	chrono::milliseconds ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	SIZE_T memoryUsed = pmc.WorkingSetSize;
+
+	FMIndex index(in);
+	index.prepare();
+
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	memoryUsed = pmc.WorkingSetSize - memoryUsed;
+
+	chrono::milliseconds ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	int preprocessTime = (ms2 - ms).count();
+	ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
 	for (int i = 0; i < pocetTestovani; i++)
 	{
-		for (list<DnaString>::iterator iter = queries.begin(); iter != queries.end(); iter++)
-		{
-
-			while (find(fmFinder, *iter))
-			{
-				out.push_back(position(fmFinder));
-			}
-			clear(fmFinder);
-		}
+		index.query(queries, out);
 	}
-	milliseconds ms2 = duration_cast< milliseconds >(
-		system_clock::now().time_since_epoch()
-		);
-	printTestResults("FM-Index", out.size(), (ms2 - ms).count() / 10);
+	ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	printTestResults("FM-Index", pocetPrvkov(out), memoryUsed, preprocessTime, (ms2 - ms).count() / 10);
 	return out;
 }
 
-int readDnaStringFromFile(DnaString &out, const char *file)
+list<list<int>> testHashTable(seqan::DnaString &in, list<seqan::DnaString> &queries, int pocetTestovani)
 {
-	CharString seqFileName = getAbsolutePath(file);
-	SeqFileIn seqFileIn;
-	if (!open(seqFileIn, toCString(seqFileName)))
-	{
-		cerr << "ERROR: Could not open the file.\n";
-		return 1;
-	}
+	list<list<int>> out;
+	chrono::milliseconds ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
 
-	StringSet<CharString> ids;
-	StringSet<CharString> seqs;
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	SIZE_T memoryUsed = pmc.WorkingSetSize;
 
-	try
-	{
-		readRecords(ids, seqs, seqFileIn);
-	}
-	catch (Exception const & e)
-	{
-		cout << "ERROR: " << e.what() << endl;
-		return 1;
-	}
+	HashTable hashTable(in);
+	hashTable.prepare();
 
-	for (int i = 0; i < length(ids); ++i)
-	{
-		for (int j = 0; j < length(seqs[i]); j++)
-		{
-			if (seqs[i][j] == 'A' || seqs[i][j] == 'T' || seqs[i][j] == 'G' || seqs[i][j] == 'C')
-			{
-				out += seqs[i][j];
-			}
-		}
-	}
-	return 0;
-}
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	memoryUsed = pmc.WorkingSetSize - memoryUsed;
 
-int readQueriesFromFile(list<DnaString> &out, const char *file)
-{
-	CharString seqFileName = getAbsolutePath(file);
-	SeqFileIn seqFileIn;
-	if (!open(seqFileIn, toCString(seqFileName)))
+	chrono::milliseconds ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	int preprocessTime = (ms2 - ms).count();
+	ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	for (int i = 0; i < pocetTestovani; i++)
 	{
-		cerr << "ERROR: Could not open the file.\n";
-		return 1;
+		hashTable.query(queries, out);
 	}
-
-	StringSet<CharString> ids;
-	StringSet<CharString> seqs;
-
-	try
-	{
-		readRecords(ids, seqs, seqFileIn);
-	}
-	catch (Exception const & e)
-	{
-		cout << "ERROR: " << e.what() << endl;
-		return 1;
-	}
-
-	for (int i = 0; i < length(ids); ++i)
-	{
-		out.push_back(seqs[i]);
-	}
-	return 0;
+	ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	printTestResults("Hash table", pocetPrvkov(out), memoryUsed, preprocessTime, (ms2 - ms).count() / 10);
+	return out;
 }
 
 int main()
 {
-	milliseconds ms = duration_cast< milliseconds >(
-		system_clock::now().time_since_epoch()
-		);
-	DnaString text;
-	readDnaStringFromFile(text, "/genome.fasta");
-	//readDnaStringFromFile(text, "/genome2.fasta");
+	chrono::milliseconds ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	IOtool io("/genome.fasta");
+	seqan::DnaString text = io.readDnaString();
+	io = IOtool("/queries.fasta");
+	list<seqan::DnaString> queries = io.readQueries();
+	chrono::milliseconds ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
 
-	list<DnaString> queries;
-	readQueriesFromFile(queries, "/queries.fasta");
+	cout << "Input data loaded." << endl;
+	cout << "String length: " << length(text) << endl;
+	cout << "Queries number: " << queries.size() << endl;
+	cout << "Time of data loading: " << (ms2 - ms).count() << "ms" << endl;
+	cout << "====================" << endl;
 
-	milliseconds ms2 = duration_cast< milliseconds >(
-		system_clock::now().time_since_epoch()
-		);
-	
-	cout << "Nacitane vstupne data." << endl;
-	cout << "Velkost retazca: " << length(text) << endl;
-	cout << "Pocet queries: " << queries.size() << endl;
-	cout << "time: " << (ms2 - ms).count() << endl;
-
-	findQueriesTest(text, queries, 10);
+	testXYIndex(text, queries, 10);
+	testHashTable(text, queries, 10);
 	testFMIndex(text, queries, 10);
 
 	cin.get();
 	return 0;
 }
+
