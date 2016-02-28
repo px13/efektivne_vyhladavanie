@@ -30,9 +30,8 @@ int IOtool::readFromFile()
 	return 0;
 }
 
-seqan::DnaString IOtool::readDnaString()
+seqan::DnaString IOtool::readDnaString(seqan::DnaString &out)
 {
-	seqan::DnaString out;
 	seqan::StringSet<seqan::Dna> buffer;
 	if (readFromFile() == 0)
 	{

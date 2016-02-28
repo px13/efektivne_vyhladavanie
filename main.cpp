@@ -1,5 +1,5 @@
 #include "io_tool.h"
-#include "xy_index.h"
+#include "min_hash.h"
 #include "fm_index.h"
 #include "hash_table.h"
 #include <chrono>
@@ -34,10 +34,11 @@ list<list<int>> testXYIndex(seqan::DnaString &in, list<seqan::DnaString> &querie
 	PROCESS_MEMORY_COUNTERS pmc;
 	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 	SIZE_T memoryUsed = pmc.WorkingSetSize;
-
-	XYIndex index(in);
+	
+	MinHash index(in);
 	index.prepare();
-
+	
+	
 	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 	memoryUsed = pmc.WorkingSetSize - memoryUsed;
 
@@ -49,7 +50,7 @@ list<list<int>> testXYIndex(seqan::DnaString &in, list<seqan::DnaString> &querie
 		index.query(queries, out);
 	}
 	ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
-	printTestResults("XY-Index", pocetPrvkov(out), memoryUsed, preprocessTime, (ms2 - ms).count() / 10);
+	printTestResults("MinHash", pocetPrvkov(out), memoryUsed, preprocessTime, (ms2 - ms).count() / 10);
 	return out;
 }
 
@@ -109,9 +110,13 @@ list<list<int>> testHashTable(seqan::DnaString &in, list<seqan::DnaString> &quer
 
 int main()
 {
+
 	chrono::milliseconds ms = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());
+	seqan::DnaString text;
 	IOtool io("/genome.fasta");
-	seqan::DnaString text = io.readDnaString();
+	io.readDnaString(text);
+	//io = IOtool("/genome2.fasta");
+	//io.readDnaString(text);
 	io = IOtool("/queries.fasta");
 	list<seqan::DnaString> queries = io.readQueries();
 	chrono::milliseconds ms2 = chrono::duration_cast< chrono::milliseconds >(chrono::system_clock::now().time_since_epoch());

@@ -1,17 +1,28 @@
-#include "xy_index.h"
+#include "min_hash.h"
 
-long to10(const seqan::Segment<seqan::DnaString> &segment)
+int stringToNumber(const seqan::Segment<seqan::DnaString> &segment)
 {
-	long result = segment[0].value;
-	for (int i = 1; i != segment.data_end_position - segment.data_begin_position; i++)
+	int result = 0;
+	for (int i = 0; i < 13; ++i)
 	{
-		result *= 10;
-		result += segment[i].value;
+		switch (segment[i].value)
+		{
+		case 1:
+			++result;
+		case 0:
+			result <<= 2;
+			break;
+		case 3:
+			++result;
+		case 2:
+			result <<= 1;
+			++result <<= 1;
+		}
 	}
 	return result;
 }
 
-XYIndex::XYIndex(seqan::DnaString text, int n, int m)
+MinHash::MinHash(seqan::DnaString text, int n, int m)
 {
 	this->text = text;
 	this->N = n;
@@ -19,22 +30,27 @@ XYIndex::XYIndex(seqan::DnaString text, int n, int m)
 	this->N_MINUS_M = n - m;
 }
 
-DnaInfix XYIndex::findMinSegmentOfLengthM(seqan::DnaString &in, int begin, const int end)
+DnaInfix MinHash::findMinSegmentOfLengthM(seqan::DnaString &in, int begin, int end)
 {
+	end = end - M;
 	DnaInfix minSegment = seqan::infixWithLength(in, begin, M);
-	for (begin = begin + 1; begin + M <= end; begin++)
+	for (begin = begin + 1; begin <= end; ++begin)
 	{
-		minSegment = min(seqan::infixWithLength(in, begin, M), minSegment);
+		DnaInfix temp = seqan::infixWithLength(in, begin, M);
+		if (isLess(temp, minSegment))
+		{
+			minSegment = temp;
+		}
 	}
 	return minSegment;
 }
 
-void XYIndex::addSegmentToMap(const seqan::Segment<seqan::DnaString> &segment)
+void MinHash::addSegmentToMap(const seqan::Segment<seqan::DnaString> &segment)
 {
-	this->map.insert(pair<long, int>(to10(segment), segment.data_begin_position));
+	this->map.insert(pair<int, int>(stringToNumber(segment), segment.data_begin_position));
 }
 
-void XYIndex::prepare()
+void MinHash::prepare()
 {
 	this->map.clear();
 	DnaInfix lastMinSegment = findMinSegmentOfLengthM(this->text, 0, N);
@@ -60,7 +76,7 @@ void XYIndex::prepare()
 	preprocessDone = true;
 }
 
-bool XYIndex::isCorrect(seqan::DnaString &query, int beginSegment, DnaInfix &queryMinSegment)
+bool MinHash::isCorrect(seqan::DnaString &query, int beginSegment, DnaInfix &queryMinSegment)
 {
 	return (
 			isEqual(
@@ -75,7 +91,7 @@ bool XYIndex::isCorrect(seqan::DnaString &query, int beginSegment, DnaInfix &que
 		);
 }
 
-void XYIndex::query(list<seqan::DnaString> &queries, list<list<int>> &out)
+void MinHash::query(list<seqan::DnaString> &queries, list<list<int>> &out)
 {
 	if (!preprocessDone)
 	{
@@ -84,7 +100,7 @@ void XYIndex::query(list<seqan::DnaString> &queries, list<list<int>> &out)
 	findQueries(queries, out);
 }
 
-void XYIndex::findQueries(list<seqan::DnaString> &queries, list<list<int>> &out)
+void MinHash::findQueries(list<seqan::DnaString> &queries, list<list<int>> &out)
 {
 	for (list<seqan::DnaString>::iterator listIterator = queries.begin(); listIterator != queries.end(); listIterator++)
 	{
@@ -94,18 +110,19 @@ void XYIndex::findQueries(list<seqan::DnaString> &queries, list<list<int>> &out)
 	}
 }
 
-void XYIndex::findQuery(seqan::DnaString &query, list<int> &out)
+void MinHash::findQuery(seqan::DnaString &query, list<int> &out)
 {
 	DnaInfix queryMinSegment = findMinSegmentOfLengthM(query, 0, N);
-	pair<unordered_multimap<long, int>::iterator, unordered_multimap<long, int>::iterator> mapIteratorPair = this->map.equal_range(to10(queryMinSegment));
-	for (unordered_multimap<long, int>::iterator mapIterator = mapIteratorPair.first; mapIterator != mapIteratorPair.second; ++mapIterator)
+	pair<unordered_multimap<int, int>::iterator, unordered_multimap<int, int>::iterator> mapIteratorPair = this->map.equal_range(stringToNumber(queryMinSegment));
+	for (unordered_multimap<int, int>::iterator mapIterator = mapIteratorPair.first; mapIterator != mapIteratorPair.second; ++mapIterator)
 	{
 		if (isCorrect(query, (*mapIterator).second, queryMinSegment))
-			out.push_back((*mapIterator).second - queryMinSegment.data_begin_position);
+			out.push_back(
+			(*mapIterator).second - queryMinSegment.data_begin_position);
 	}
 }
 
-void XYIndex::setText(seqan::DnaString text)
+void MinHash::setText(seqan::DnaString text)
 {
 	this->text = text;
 	this->preprocessDone = false;

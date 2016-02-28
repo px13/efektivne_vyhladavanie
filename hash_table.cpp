@@ -1,13 +1,23 @@
 #include "hash_table.h"
 
-vector<long long> nasobky4 = { 4611686018427387904, 1152921504606846976, 288230376151711744, 72057594037927936, 18014398509481984, 4503599627370496, 1125899906842624, 281474976710656, 70368744177664, 17592186044416, 4398046511104, 1099511627776, 274877906944, 68719476736, 17179869184, 4294967296, 1073741824, 268435456, 67108864, 16777216, 4194304, 1048576, 262144, 65536, 16384, 4096, 1024, 256, 64, 16, 4, 1 };
-
-long long to4(const seqan::Segment<seqan::DnaString> &segment)
+long long stringToNumber(const seqan::Segment<seqan::DnaString> &segment)
 {
 	long long result = 0;
-	for (int i = 0; i != segment.data_end_position - segment.data_begin_position; i++)
+	for (int i = 0; i < 32; ++i)
 	{
-		result += (segment[i].value * nasobky4[i]);
+		switch (segment[i].value)
+		{
+		case 1:
+			++result;
+		case 0:
+			result <<= 2;
+			break;
+		case 3:
+			++result;
+		case 2:
+			result <<= 1;
+			++result <<= 1;
+		}
 	}
 	return result;
 }
@@ -23,7 +33,7 @@ void HashTable::prepare()
 	DnaInfix lastMinSegment = seqan::infixWithLength(this->text, 0, 32);
 	for (int i = 0; i + 32 <= length(this->text); i++)
 	{
-		this->map.insert(pair<long long, int>(to4(seqan::infixWithLength(this->text, i, 32)), i));
+		this->map.insert(pair<long long, int>(stringToNumber(seqan::infixWithLength(this->text, i, 32)), i));
 	}
 	preprocessDone = true;
 }
@@ -49,7 +59,7 @@ void HashTable::findQueries(list<seqan::DnaString> &queries, list<list<int>> &ou
 
 void HashTable::findQuery(seqan::DnaString &query, list<int> &out)
 {
-	pair<unordered_multimap<long long, int>::iterator, unordered_multimap<long long, int>::iterator> mapIteratorPair = this->map.equal_range(to4(seqan::infixWithLength(query, 0, 32)));
+	pair<unordered_multimap<long long, int>::iterator, unordered_multimap<long long, int>::iterator> mapIteratorPair = this->map.equal_range(stringToNumber(seqan::infixWithLength(query, 0, 32)));
 	for (unordered_multimap<long long, int>::iterator mapIterator = mapIteratorPair.first; mapIterator != mapIteratorPair.second; ++mapIterator)
 	{
 		out.push_back((*mapIterator).second);

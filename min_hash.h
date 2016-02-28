@@ -6,7 +6,7 @@ using namespace std;
 
 typedef seqan::Infix<seqan::DnaString>::Type  DnaInfix;
 
-class XYIndex
+class MinHash
 {
 	public:
 
@@ -16,7 +16,7 @@ class XYIndex
 
 		bool preprocessDone;
 
-		XYIndex(seqan::DnaString text, int n = 32, int m = 13);
+		MinHash(seqan::DnaString text, int n = 32, int m = 13);
 
 		void query(list<seqan::DnaString> &queries, list<list<int>> &out);
 		void prepare();
@@ -24,12 +24,12 @@ class XYIndex
 		void setText(seqan::DnaString text);
 	private:
 		seqan::DnaString text;
-		unordered_multimap<long, int> map;
+		unordered_multimap<int, int> map;
 
 		void findQuery(seqan::DnaString &query, list<int> &out);
 		void findQueries(list<seqan::DnaString> &queries, list<list<int>> &out);
 
-		DnaInfix findMinSegmentOfLengthM(seqan::DnaString &in, int begin, const int end);
+		DnaInfix findMinSegmentOfLengthM(seqan::DnaString &in, int begin, int end);
 		void addSegmentToMap(const seqan::Segment<seqan::DnaString> &segment);
 
 		bool isCorrect(seqan::DnaString &query, int beginSegment, DnaInfix &queryMinSegment);
