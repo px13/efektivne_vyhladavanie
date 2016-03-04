@@ -7,12 +7,12 @@ using namespace std;
 class IOtool
 {
 	public:
-		char *file;
+		char * file;
 		seqan::StringSet<seqan::CharString> ids;
 		seqan::StringSet<seqan::CharString> seqs;
-		IOtool(char *file);
+		IOtool(char * file);
 		seqan::DnaString readDnaString(seqan::DnaString &out);
-		list<seqan::DnaString> readQueries();
+		void readQueries(vector<seqan::DnaString> &out);
 		int writeQueries(seqan::StringSet<seqan::DnaString> &queries);
 	private:
 		int readFromFile();

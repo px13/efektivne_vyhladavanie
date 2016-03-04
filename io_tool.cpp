@@ -2,7 +2,7 @@
 
 using namespace std;
 
-IOtool::IOtool(char *file)
+IOtool::IOtool(char * file)
 {
 	this->file = file;
 }
@@ -46,22 +46,23 @@ seqan::DnaString IOtool::readDnaString(seqan::DnaString &out)
 	return out;
 }
 
-list<seqan::DnaString> IOtool::readQueries()
+void IOtool::readQueries(vector<seqan::DnaString> &out)
 {
-	list<seqan::DnaString> out;
+	deque<seqan::DnaString> temp;
 	if (readFromFile() == 0)
 	{
 		for (int i = 0; i < length(this->ids); ++i)
 		{
-			seqan::DnaString temp;
+			seqan::DnaString query;
 			for (int j = 0; j < length(this->seqs[i]); j++)
 			{
-				addCharToDnaString(this->seqs[i][j], temp);
+				addCharToDnaString(this->seqs[i][j], query);
 			}
-			out.push_back(temp);
+			out.push_back(query);
 		}	
 	}
-	return out;
+	out.reserve(temp.size());
+	copy(temp.begin(), temp.end(), back_inserter(out));
 }
 
 int IOtool::writeQueries(seqan::StringSet<seqan::DnaString> &queries)

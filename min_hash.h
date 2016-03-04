@@ -1,5 +1,5 @@
 #include <seqan/sequence.h>
-#include <list>
+#include <deque>
 #include <unordered_map>
 
 using namespace std;
@@ -10,27 +10,30 @@ class MinHash
 {
 	public:
 
-		int N = 32;
-		int M = 13;
-		int N_MINUS_M = N - M;
+		const int N = 32;
+		const int M = 13;
+		const int N_MINUS_M = N - M;
 
 		bool preprocessDone;
 
-		MinHash(seqan::DnaString text, int n = 32, int m = 13);
-
-		void query(list<seqan::DnaString> &queries, list<list<int>> &out);
+		MinHash(seqan::DnaString sequence, const int n = 32, const int m = 13);
+		void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
 		void prepare();
 
-		void setText(seqan::DnaString text);
+		void setText(seqan::DnaString sequence);
+
 	private:
-		seqan::DnaString text;
+		seqan::DnaString sequence;
 		unordered_multimap<int, int> map;
 
-		void findQuery(seqan::DnaString &query, list<int> &out);
-		void findQueries(list<seqan::DnaString> &queries, list<list<int>> &out);
+		void findQuery(seqan::DnaString &query, deque<int> &out);
+		void findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
 
-		DnaInfix findMinSegmentOfLengthM(seqan::DnaString &in, int begin, int end);
-		void addSegmentToMap(const seqan::Segment<seqan::DnaString> &segment);
+		void findMinSegmentOfLengthM(DnaInfix &temp, DnaInfix &out);
+		void addSegmentToMap(const DnaInfix &segment);
 
-		bool isCorrect(seqan::DnaString &query, int beginSegment, DnaInfix &queryMinSegment);
+		int isCorrect(seqan::DnaString &query, const int beginSegment, const DnaInfix &queryMinSegment);
+
+		void minSegment(const DnaInfix &segment1, DnaInfix &segment2);
+		int segmentToNumber(const DnaInfix &segment);
 };

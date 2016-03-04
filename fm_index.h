@@ -1,6 +1,6 @@
 #include <seqan/sequence.h>
 #include <seqan/index.h>
-#include <list>
+#include <deque>
 
 using namespace std;
 
@@ -10,14 +10,13 @@ class FMIndex
 {
 	public:
 
-		FMIndex(seqan::DnaString text);
+		FMIndex(seqan::DnaString &sequence = seqan::DnaString());
 		void prepare();
-		void query(list<seqan::DnaString> &queries, list<list<int>> &out);
+		void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
 		
 	private:
 
 		seqan::Index<seqan::DnaString, seqan::FMIndex<> > fmIndex;
 		seqan::Finder<seqan::Index<seqan::DnaString, seqan::FMIndex<> > > fmFinder;
 
-		
 };

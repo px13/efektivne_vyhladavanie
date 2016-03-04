@@ -1,70 +1,58 @@
 #include "min_hash.h"
 
-int stringToNumber(const seqan::Segment<seqan::DnaString> &segment)
+MinHash::MinHash(seqan::DnaString sequence, const int n, const int m) :
+	N(n),
+	M(m),
+	N_MINUS_M(n-m)
 {
-	int result = 0;
-	for (int i = 0; i < 13; ++i)
+	this->sequence = sequence;
+	this->preprocessDone = false;
+}
+
+void MinHash::findMinSegmentOfLengthM(DnaInfix &temp, DnaInfix &out)
+{
+	minSegment(temp, out);
+	for (int i = 2; i <= N_MINUS_M; i++)
 	{
-		switch (segment[i].value)
-		{
-		case 1:
-			++result;
-		case 0:
-			result <<= 2;
-			break;
-		case 3:
-			++result;
-		case 2:
-			result <<= 1;
-			++result <<= 1;
-		}
+		++temp.data_begin_position;
+		++temp.data_end_position;
+		minSegment(temp, out);
 	}
-	return result;
 }
 
-MinHash::MinHash(seqan::DnaString text, int n, int m)
+void MinHash::minSegment(const DnaInfix &segment1, DnaInfix &segment2)
 {
-	this->text = text;
-	this->N = n;
-	this->M = m;
-	this->N_MINUS_M = n - m;
-}
-
-DnaInfix MinHash::findMinSegmentOfLengthM(seqan::DnaString &in, int begin, int end)
-{
-	end = end - M;
-	DnaInfix minSegment = seqan::infixWithLength(in, begin, M);
-	for (begin = begin + 1; begin <= end; ++begin)
+	if (isLess(segment1, segment2))
 	{
-		DnaInfix temp = seqan::infixWithLength(in, begin, M);
-		if (isLess(temp, minSegment))
-		{
-			minSegment = temp;
-		}
+		segment2.data_begin_position = segment1.data_begin_position;
+		segment2.data_end_position = segment1.data_end_position;
 	}
-	return minSegment;
 }
 
-void MinHash::addSegmentToMap(const seqan::Segment<seqan::DnaString> &segment)
+void MinHash::addSegmentToMap(const DnaInfix &segment)
 {
-	this->map.insert(pair<int, int>(stringToNumber(segment), segment.data_begin_position));
+	map.emplace(segmentToNumber(segment), segment.data_begin_position);
 }
 
 void MinHash::prepare()
 {
-	this->map.clear();
-	DnaInfix lastMinSegment = findMinSegmentOfLengthM(this->text, 0, N);
+	map.clear();
+	DnaInfix lastMinSegment(sequence, 0, M);
+	findMinSegmentOfLengthM(DnaInfix(sequence, 1, 1 + M), lastMinSegment);
 	addSegmentToMap(lastMinSegment);
-	for (int i = N_MINUS_M + 1; i + M <= length(this->text); i++)
+	for (int i = N_MINUS_M + 1; i <= length(sequence) - M; i++)
 	{
-		if (lastMinSegment.data_begin_position < i - N_MINUS_M)
+		int begin = i - N_MINUS_M; 
+		if (lastMinSegment.data_begin_position < begin)
 		{
-			lastMinSegment = findMinSegmentOfLengthM(this->text, i - N_MINUS_M, i + M);
+			int end = begin + M;
+			lastMinSegment = DnaInfix(sequence, begin, end);
+			findMinSegmentOfLengthM(DnaInfix(sequence, begin + 1, end + 1), lastMinSegment);
 			addSegmentToMap(lastMinSegment);
 		}
 		else
 		{
-			DnaInfix segment = seqan::infixWithLength(this->text, i, M);
+			DnaInfix segment = DnaInfix(sequence, i, i + M);
 			if (isLess(segment, lastMinSegment))
 			{
 				lastMinSegment = segment;
@@ -76,22 +64,32 @@ void MinHash::prepare()
 	preprocessDone = true;
 }
 
-bool MinHash::isCorrect(seqan::DnaString &query, int beginSegment, DnaInfix &queryMinSegment)
+int MinHash::isCorrect(seqan::DnaString &query, const int beginSegment, const DnaInfix &queryMinSegment)
 {
-	return (
+	int begin = beginSegment - queryMinSegment.data_begin_position;
+	int end = begin + N;
+	if (
 			isEqual(
-				seqan::infixWithLength(query, 0, queryMinSegment.data_begin_position),
-				seqan::infixWithLength(this->text, beginSegment - queryMinSegment.data_begin_position, queryMinSegment.data_begin_position)
+				DnaInfix(query, 0, queryMinSegment.data_begin_position),
+				DnaInfix(sequence, begin, beginSegment)
 			)
 			&&
 			isEqual(
-				seqan::infixWithLength(query, queryMinSegment.data_end_position, N - queryMinSegment.data_end_position),
-				seqan::infixWithLength(this->text, beginSegment + M, N - queryMinSegment.data_end_position)
+				DnaInfix(query, queryMinSegment.data_end_position, N),
+				DnaInfix(sequence, beginSegment + M, end)
 			)
-		);
+		)
+		return begin;
+	return -1;
 }
 
-void MinHash::query(list<seqan::DnaString> &queries, list<list<int>> &out)
+void MinHash::setText(seqan::DnaString sequence)
+{
+	this->sequence = sequence;
+	this->preprocessDone = false;
+}
+
+void MinHash::query(vector<seqan::DnaString> &queries, vector<deque<int>> &out)
 {
 	if (!preprocessDone)
 	{
@@ -100,30 +98,46 @@ void MinHash::query(list<seqan::DnaString> &queries, list<list<int>> &out)
 	findQueries(queries, out);
 }
 
-void MinHash::findQueries(list<seqan::DnaString> &queries, list<list<int>> &out)
+void MinHash::findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out)
 {
-	for (list<seqan::DnaString>::iterator listIterator = queries.begin(); listIterator != queries.end(); listIterator++)
+	auto queryIter = queries.begin();
+	auto outIter = out.begin();
+	for (; queryIter != queries.end(); ++queryIter, ++outIter)
 	{
-		list<int> temp;
-		findQuery(*listIterator, temp);
-		out.push_back(temp);
+		findQuery(*queryIter, *outIter);
 	}
 }
 
-void MinHash::findQuery(seqan::DnaString &query, list<int> &out)
+void MinHash::findQuery(seqan::DnaString &query, deque<int> &out)
 {
-	DnaInfix queryMinSegment = findMinSegmentOfLengthM(query, 0, N);
-	pair<unordered_multimap<int, int>::iterator, unordered_multimap<int, int>::iterator> mapIteratorPair = this->map.equal_range(stringToNumber(queryMinSegment));
-	for (unordered_multimap<int, int>::iterator mapIterator = mapIteratorPair.first; mapIterator != mapIteratorPair.second; ++mapIterator)
+	DnaInfix queryMinSegment = DnaInfix(query, 0, M);
+	findMinSegmentOfLengthM(seqan::infixWithLength(query, 1, M), queryMinSegment);
+	auto mapIteratorPair = map.equal_range(segmentToNumber(queryMinSegment));
+	for (auto mapIterator = mapIteratorPair.first; mapIterator != mapIteratorPair.second; ++mapIterator)
 	{
-		if (isCorrect(query, (*mapIterator).second, queryMinSegment))
-			out.push_back(
-			(*mapIterator).second - queryMinSegment.data_begin_position);
+		if (int position = isCorrect(query, (*mapIterator).second, queryMinSegment) != -1)
+			out.push_back(position);
 	}
 }
 
-void MinHash::setText(seqan::DnaString text)
+int MinHash::segmentToNumber(const DnaInfix &segment)
 {
-	this->text = text;
-	this->preprocessDone = false;
+	int result = 0;
+	for (int i = 0; i < M; i++)
+	{
+		switch (segment[i].value)
+		{
+		case 1:
+			result++;
+		case 0:
+			result <<= 2;
+			break;
+		case 3:
+			result++;
+		case 2:
+			result <<= 1;
+			++result <<= 1;
+		}
+	}
+	return result;
 }

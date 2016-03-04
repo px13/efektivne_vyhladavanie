@@ -1,5 +1,5 @@
 #include <seqan/sequence.h>
-#include <list>
+#include <deque>
 #include <unordered_map>
 
 using namespace std;
@@ -12,16 +12,17 @@ public:
 
 	bool preprocessDone;
 
-	HashTable(seqan::DnaString text);
+	HashTable(seqan::DnaString &sequence = seqan::DnaString());
 
-	void query(list<seqan::DnaString> &queries, list<list<int>> &out);
+	void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
 	void prepare();
 
-	void setText(seqan::DnaString text);
+	void setText(seqan::DnaString sequence);
 private:
-	seqan::DnaString text;
+	seqan::DnaString sequence;
 	unordered_multimap<long long, int> map;
 
-	void findQuery(seqan::DnaString &query, list<int> &out);
-	void findQueries(list<seqan::DnaString> &queries, list<list<int>> &out);
+	void findQuery(seqan::DnaString &query, deque<int> &out);
+	void findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
+	long long segmentToNumber(const seqan::Segment<seqan::DnaString> &segment);
 };
