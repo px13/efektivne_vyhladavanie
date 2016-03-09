@@ -10,7 +10,7 @@ int main()
 	io.readDnaString(text);
 	//io = IOtool("/genome2.fasta");
 	//io.readDnaString(text);
-	io = IOtool("/queries2.fasta");
+	io = IOtool("/queries1-1m.fasta");
 	io.readQueries(queries);
 	time = getTime() - time;
 
@@ -25,6 +25,8 @@ int main()
 	Benchmarker benchmark(text, queries, 10);
 
 	benchmark.test(0, result);
+	benchmark.test(3, result);
+	benchmark.test(4, result);
 	benchmark.test(1, result);
 	benchmark.test(2, result);
 

@@ -5,6 +5,8 @@
 #include <chrono>
 #include "windows.h"
 #include "min_hash.h"
+#include "min_hash_vector.h"
+#include "min_hash_pair.h"
 #include "fm_index.h"
 #include "hash_table.h"
 #include "psapi.h"

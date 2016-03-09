@@ -43,6 +43,46 @@ void Benchmarker::test(const int algorithm, vector<deque<int>> &out)
 			}
 			break;
 		}
+		case 3:
+		{
+			algorithmName = "MinHashVector";
+			start = getTime();
+			memoryUsed = getCurrentMemoryUsed();
+			MinHashVector index(text);
+			index.prepare();
+			memoryUsed = getCurrentMemoryUsed() - memoryUsed;
+			end = getTime();
+			preparingTime = (end - start).count();
+			for (int i = 0; i < numberOfTestingCycles; i++)
+			{
+				out.clear(); out.resize(queries.size());
+				start = getTime();
+				index.query(queries, out);
+				end = getTime();
+				searchingTimes[i] = (end - start).count();
+			}
+			break;
+		}
+		case 4:
+		{
+			algorithmName = "MinHashPair";
+			start = getTime();
+			memoryUsed = getCurrentMemoryUsed();
+			MinHashPair index(text);
+			index.prepare();
+			memoryUsed = getCurrentMemoryUsed() - memoryUsed;
+			end = getTime();
+			preparingTime = (end - start).count();
+			for (int i = 0; i < numberOfTestingCycles; i++)
+			{
+				out.clear(); out.resize(queries.size());
+				start = getTime();
+				index.query(queries, out);
+				end = getTime();
+				searchingTimes[i] = (end - start).count();
+			}
+			break;
+		}
 		case 1:
 		{
 			algorithmName = "HashTable";
