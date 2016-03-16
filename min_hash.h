@@ -16,24 +16,24 @@ class MinHash
 
 		bool preprocessDone;
 
-		MinHash(seqan::DnaString sequence, const int n = 32, const int m = 13);
-		void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
+		MinHash(seqan::DnaString &sequence, const int n = 32, const int m = 13);
 		void prepare();
+		void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
 
-		void setText(seqan::DnaString sequence);
+		void setText(seqan::DnaString &sequence);
 
 	private:
 		seqan::DnaString sequence;
 		unordered_multimap<int, int> map;
 
-		void findQuery(seqan::DnaString &query, deque<int> &out);
-		void findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
-
-		void findMinSegmentOfLengthM(DnaInfix &temp, DnaInfix &out);
+		void addMinSegmentToMap(DnaInfix &segment1, DnaInfix &segment2);
+		void findMinSegmentOfLengthM(DnaInfix &segment1, DnaInfix &segment2);
+		void minSegment(const DnaInfix &segment1, DnaInfix &segment2);
 		void addSegmentToMap(const DnaInfix &segment);
 
-		int isCorrect(seqan::DnaString &query, const int beginSegment, const DnaInfix &queryMinSegment);
+		void findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
+		void findQuery(seqan::DnaString &query, deque<int> &out);
+		int isCorrect(seqan::DnaString &query, const int &beginSegment, const DnaInfix &queryMinSegment);
 
-		void minSegment(const DnaInfix &segment1, DnaInfix &segment2);
-		int segmentToNumber(const DnaInfix &segment);
+		int segmentToNumber(const DnaInfix &segment);		
 };

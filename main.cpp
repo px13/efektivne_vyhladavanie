@@ -8,9 +8,9 @@ int main()
 	vector<seqan::DnaString> queries;
 	IOtool io("/genome.fasta");
 	io.readDnaString(text);
-	//io = IOtool("/genome2.fasta");
-	//io.readDnaString(text);
-	io = IOtool("/queries1-1m.fasta");
+	io = IOtool("/genome2.fasta");
+	io.readDnaString(text);
+	io = IOtool("/queries1m.fasta");
 	io.readQueries(queries);
 	time = getTime() - time;
 
@@ -21,7 +21,7 @@ int main()
 	cout << "====================" << endl;
 	
 	vector<deque<int>> result(queries.size());
-
+	
 	Benchmarker benchmark(text, queries, 10);
 
 	benchmark.test(0, result);

@@ -1,57 +1,25 @@
 #include "min_hash_pair.h"
 
-MinHashPair::MinHashPair(seqan::DnaString sequence, const int n, const int m) :
+MinHashPair::MinHashPair(seqan::DnaString &sequence, const int n, const int m) :
 N(n),
 M(m),
 N_MINUS_M(n - m)
 {
 	this->sequence = sequence;
 	this->preprocessDone = false;
-	this->lenPole = 0;
-}
-
-void MinHashPair::findMinSegmentOfLengthM(DnaInfix &temp, DnaInfix &out)
-{
-	minSegment(temp, out);
-	for (int i = 2; i <= N_MINUS_M; i++)
-	{
-		++temp.data_begin_position;
-		++temp.data_end_position;
-		minSegment(temp, out);
-	}
-}
-
-void MinHashPair::minSegment(const DnaInfix &segment1, DnaInfix &segment2)
-{
-	if (isLess(segment1, segment2))
-	{
-		segment2.data_begin_position = segment1.data_begin_position;
-		segment2.data_end_position = segment1.data_end_position;
-	}
-}
-
-void MinHashPair::addSegmentToMap(const DnaInfix &segment)
-{
-	map.emplace(segmentToNumber(segment), segment.data_begin_position);
 }
 
 void MinHashPair::prepare()
 {
 	map.clear();
-	pole.clear();
-	lenPole = 0;
 	DnaInfix lastMinSegment(sequence, 0, M);
-	findMinSegmentOfLengthM(DnaInfix(sequence, 1, 1 + M), lastMinSegment);
-	addSegmentToMap(lastMinSegment);
-	for (int i = N_MINUS_M + 1; i <= length(sequence) - M; i++)
+	addMinSegmentToMap(DnaInfix(sequence, 1, 1 + M), lastMinSegment);
+	for (int i = N_MINUS_M + 1, j = 1; i <= length(sequence) - M; ++i, ++j)
 	{
-		int begin = i - N_MINUS_M;
-		if (lastMinSegment.data_begin_position < begin)
+		if (lastMinSegment.data_begin_position < j)
 		{
-			int end = begin + M;
-			lastMinSegment = DnaInfix(sequence, begin, end);
-			findMinSegmentOfLengthM(DnaInfix(sequence, begin + 1, end + 1), lastMinSegment);
-			addSegmentToMap(lastMinSegment);
+			lastMinSegment = DnaInfix(sequence, j, j + M);
+			addMinSegmentToMap(DnaInfix(sequence, j + 1, lastMinSegment.data_end_position + 1), lastMinSegment);
 		}
 		else
 		{
@@ -68,31 +36,6 @@ void MinHashPair::prepare()
 	preprocessDone = true;
 }
 
-int MinHashPair::isCorrect(seqan::DnaString &query, const int beginSegment, const DnaInfix &queryMinSegment)
-{
-	int begin = beginSegment - queryMinSegment.data_begin_position;
-	int end = begin + N;
-	if (
-		isEqual(
-		DnaInfix(query, 0, queryMinSegment.data_begin_position),
-		DnaInfix(sequence, begin, beginSegment)
-		)
-		&&
-		isEqual(
-		DnaInfix(query, queryMinSegment.data_end_position, N),
-		DnaInfix(sequence, beginSegment + M, end)
-		)
-		)
-		return begin;
-	return -1;
-}
-
-void MinHashPair::setText(seqan::DnaString sequence)
-{
-	this->sequence = sequence;
-	this->preprocessDone = false;
-}
-
 void MinHashPair::query(vector<seqan::DnaString> &queries, vector<deque<int>> &out)
 {
 	if (!preprocessDone)
@@ -100,6 +43,59 @@ void MinHashPair::query(vector<seqan::DnaString> &queries, vector<deque<int>> &o
 		prepare();
 	}
 	findQueries(queries, out);
+}
+
+void MinHashPair::setText(seqan::DnaString &sequence)
+{
+	this->sequence = sequence;
+	this->preprocessDone = false;
+}
+
+void MinHashPair::addMinSegmentToMap(DnaInfix &segment1, DnaInfix &segment2)
+{
+	findMinSegmentOfLengthM(segment1, segment2);
+	addSegmentToMap(segment2);
+}
+
+void MinHashPair::findMinSegmentOfLengthM(DnaInfix &segment1, DnaInfix &segment2)
+{
+	for (int i = 1; i <= N_MINUS_M; ++i, ++segment1.data_begin_position, ++segment1.data_end_position)
+	{
+		minSegment(segment1, segment2);
+	}
+}
+
+void MinHashPair::minSegment(const DnaInfix &segment1, DnaInfix &segment2)
+{
+	if (isLess(segment1, segment2))
+	{
+		segment2 = segment1;
+	}
+}
+
+void MinHashPair::addSegmentToMap(const DnaInfix &segment)
+{
+	map.insert(pair<int, int>(segmentToNumber(segment), segment.data_begin_position));
+}
+
+void MinHashPair::spracuj()
+{
+	deque<pair<int, int>> temp;
+	for (auto iter1 = this->map.begin(), end = this->map.end();
+		iter1 != end;
+		iter1 = this->map.upper_bound(iter1->first)
+		)
+	{
+		auto a = this->map.equal_range(iter1->first);
+		for (multimap<int, int>::iterator iter2 = a.first; iter2 != a.second; ++iter2)
+		{
+			temp.push_back(pair<int, int>(iter1->first, iter2->second));
+			lenPole++;
+		}
+	}
+	pole.reserve(lenPole);
+	copy(temp.begin(), temp.end(), back_inserter(pole));
+	map.clear();
 }
 
 void MinHashPair::findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out)
@@ -115,10 +111,10 @@ void MinHashPair::findQueries(vector<seqan::DnaString> &queries, vector<deque<in
 void MinHashPair::findQuery(seqan::DnaString &query, deque<int> &out)
 {
 	DnaInfix queryMinSegment = DnaInfix(query, 0, M);
-	findMinSegmentOfLengthM(seqan::infixWithLength(query, 1, M), queryMinSegment);
+	findMinSegmentOfLengthM(DnaInfix(query, 1, 1 + M), queryMinSegment);
 	int value = segmentToNumber(queryMinSegment);
 	int min = 0, max = lenPole - 1;
-	int ix = (min + max) / 2;
+	int ix = (min + max) >> 1;
 	while (min <= max)
 	{
 		int aaa = pole[ix].first;
@@ -150,8 +146,26 @@ void MinHashPair::findQuery(seqan::DnaString &query, deque<int> &out)
 			}
 			return;
 		}
-		ix = (min + max) / 2;
+		ix = (min + max) >> 1;
 	}
+}
+
+int MinHashPair::isCorrect(seqan::DnaString &query, const int &beginSegment, const DnaInfix &queryMinSegment)
+{
+	int begin = beginSegment - queryMinSegment.data_begin_position;
+	if (
+		isEqual(
+		DnaInfix(query, 0, queryMinSegment.data_begin_position),
+		DnaInfix(sequence, begin, beginSegment)
+		)
+		&&
+		isEqual(
+		DnaInfix(query, queryMinSegment.data_end_position, N),
+		DnaInfix(sequence, beginSegment + M, begin + N)
+		)
+		)
+		return begin;
+	return -1;
 }
 
 int MinHashPair::segmentToNumber(const DnaInfix &segment)
@@ -174,24 +188,4 @@ int MinHashPair::segmentToNumber(const DnaInfix &segment)
 		}
 	}
 	return result;
-}
-
-void MinHashPair::spracuj()
-{
-	deque<pair<int, int>> temp;
-	for (auto iter1 = this->map.begin(), end = this->map.end();
-		iter1 != end;
-		iter1 = this->map.upper_bound(iter1->first)
-		)
-	{
-		auto a = this->map.equal_range(iter1->first);
-		for (multimap<int, int>::iterator iter2 = a.first; iter2 != a.second; ++iter2)
-		{
-			temp.push_back(pair<int, int>(iter1->first, iter2->second));
-			lenPole++;
-		}
-	}
-	pole.reserve(lenPole);
-	copy(temp.begin(), temp.end(), back_inserter(pole));
-	map.clear();
 }
