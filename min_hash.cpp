@@ -102,19 +102,21 @@ void MinHash::findQuery(seqan::DnaString &query, deque<int> &out)
 int MinHash::isCorrect(seqan::DnaString &query, const int &beginSegment, const DnaInfix &queryMinSegment)
 {
 	int begin = beginSegment - queryMinSegment.data_begin_position;
-	if (
-			isEqual(
-				DnaInfix(query, 0, queryMinSegment.data_begin_position),
-				DnaInfix(sequence, begin, beginSegment)
-			)
-			&&
-			isEqual(
-				DnaInfix(query, queryMinSegment.data_end_position, N),
-				DnaInfix(sequence, beginSegment + M, begin + N)
-			)
-		)
-		return begin;
-	return -1;
+	for (int i = 0, j = begin; i < queryMinSegment.data_begin_position; ++i, ++j)
+	{
+		if (query[i].value != sequence[j].value)
+		{
+			return -1;
+		}
+	}
+	for (int i = queryMinSegment.data_end_position, j = beginSegment + M; i < N; ++i, ++j)
+	{
+		if (query[i].value != sequence[j].value)
+		{
+			return -1;
+		}
+	}
+	return begin;
 }
 
 int MinHash::segmentToNumber(const DnaInfix &segment)

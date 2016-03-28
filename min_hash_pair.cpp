@@ -80,7 +80,7 @@ void MinHashPair::addSegmentToMap(const DnaInfix &segment)
 
 void MinHashPair::spracuj()
 {
-	deque<pair<int, int>> temp;
+	pole.push_back(pair<int, int>(-1, -1));
 	for (auto iter1 = this->map.begin(), end = this->map.end();
 		iter1 != end;
 		iter1 = this->map.upper_bound(iter1->first)
@@ -89,12 +89,11 @@ void MinHashPair::spracuj()
 		auto a = this->map.equal_range(iter1->first);
 		for (multimap<int, int>::iterator iter2 = a.first; iter2 != a.second; ++iter2)
 		{
-			temp.push_back(pair<int, int>(iter1->first, iter2->second));
-			lenPole++;
+			pole.push_back(pair<int, int>(iter1->first, iter2->second));
 		}
 	}
-	pole.reserve(lenPole);
-	copy(temp.begin(), temp.end(), back_inserter(pole));
+	pole.push_back(pair<int, int>(-1, -1));
+	pole.shrink_to_fit();
 	map.clear();
 }
 
@@ -113,59 +112,62 @@ void MinHashPair::findQuery(seqan::DnaString &query, deque<int> &out)
 	DnaInfix queryMinSegment = DnaInfix(query, 0, M);
 	findMinSegmentOfLengthM(DnaInfix(query, 1, 1 + M), queryMinSegment);
 	int value = segmentToNumber(queryMinSegment);
-	int min = 0, max = lenPole - 1;
-	int ix = (min + max) >> 1;
-	while (min <= max)
+
+	int begin = 1, end = pole.size()-1;
+	int ix = (begin + end) >> 1;
+	while (begin <= end)
 	{
-		int aaa = pole[ix].first;
-		if (aaa < value)
+		auto iter = pole.begin();
+		advance(iter, ix);
+		if (iter->first < value)
 		{
-			min = ix + 1;
+			begin = ix + 1;
 		}
-		else if (aaa > value)
+		else if (iter->first > value)
 		{
-			max = ix - 1;
+			end = ix - 1;
 		}
 		else
 		{
-			vector<pair<int, int>>::iterator iter = pole.begin();
-			advance(iter, ix);
-			while (iter->first == value && iter != pole.end())
+			auto iter2 = iter - 1;
+			do
 			{
 				if (int position = isCorrect(query, iter->second, queryMinSegment) != -1)
 					out.push_back(position);
 				++iter;
-			}
-			iter = pole.begin();
-			advance(iter, ix - 1);
-			while (iter->first == value && iter != pole.begin())
+			} while (iter->first == value);
+
+			while (iter2->first == value)
 			{
-				if (int position = isCorrect(query, iter->second, queryMinSegment) != -1)
+				if (int position = isCorrect(query, iter2->second, queryMinSegment) != -1)
 					out.push_back(position);
-				--iter;
+				--iter2;
 			}
 			return;
 		}
-		ix = (min + max) >> 1;
+		ix = (begin + end) >> 1;
+
 	}
 }
 
 int MinHashPair::isCorrect(seqan::DnaString &query, const int &beginSegment, const DnaInfix &queryMinSegment)
 {
 	int begin = beginSegment - queryMinSegment.data_begin_position;
-	if (
-		isEqual(
-		DnaInfix(query, 0, queryMinSegment.data_begin_position),
-		DnaInfix(sequence, begin, beginSegment)
-		)
-		&&
-		isEqual(
-		DnaInfix(query, queryMinSegment.data_end_position, N),
-		DnaInfix(sequence, beginSegment + M, begin + N)
-		)
-		)
-		return begin;
-	return -1;
+	for (int i = 0, j = begin; i < queryMinSegment.data_begin_position; ++i, ++j)
+	{
+		if (query[i].value != sequence[j].value)
+		{
+			return -1;
+		}
+	}
+	for (int i = queryMinSegment.data_end_position, j = beginSegment + M; i < N; ++i, ++j)
+	{
+		if (query[i].value != sequence[j].value)
+		{
+			return -1;
+		}
+	}
+	return begin;
 }
 
 int MinHashPair::segmentToNumber(const DnaInfix &segment)

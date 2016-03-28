@@ -26,7 +26,6 @@ private:
 	seqan::DnaString sequence;
 	multimap<int, int> map;
 	vector<pair<int, int>> pole;
-	int lenPole;
 
 	void addMinSegmentToMap(DnaInfix &segment1, DnaInfix &segment2);
 	void findMinSegmentOfLengthM(DnaInfix &segment1, DnaInfix &segment2);

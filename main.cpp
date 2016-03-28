@@ -24,11 +24,11 @@ int main()
 	
 	Benchmarker benchmark(text, queries, 10);
 
-	benchmark.test(0, result);
-	benchmark.test(3, result);
+	//benchmark.test(0, result);
+	//benchmark.test(3, result);
 	benchmark.test(4, result);
-	benchmark.test(1, result);
-	benchmark.test(2, result);
+	//benchmark.test(1, result);
+	//benchmark.test(2, result);
 
 	cin.get();
 	return 0;
