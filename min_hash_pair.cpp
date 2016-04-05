@@ -12,21 +12,20 @@ N_MINUS_M(n - m)
 void MinHashPair::prepare()
 {
 	map.clear();
-	DnaInfix lastMinSegment(sequence, 0, M);
-	addMinSegmentToMap(DnaInfix(sequence, 1, 1 + M), lastMinSegment);
+	int lastMinSegment = 0;
+	addMinSegmentToMap(1, lastMinSegment);
 	for (int i = N_MINUS_M + 1, j = 1; i <= length(sequence) - M; ++i, ++j)
 	{
-		if (lastMinSegment.data_begin_position < j)
+		if (lastMinSegment < j)
 		{
-			lastMinSegment = DnaInfix(sequence, j, j + M);
-			addMinSegmentToMap(DnaInfix(sequence, j + 1, lastMinSegment.data_end_position + 1), lastMinSegment);
+			lastMinSegment = j;
+			addMinSegmentToMap(j + 1, lastMinSegment);
 		}
 		else
 		{
-			DnaInfix segment = DnaInfix(sequence, i, i + M);
-			if (isLess(segment, lastMinSegment))
+			if (isLessSegment(sequence, i, lastMinSegment))
 			{
-				lastMinSegment = segment;
+				lastMinSegment = i;
 				addSegmentToMap(lastMinSegment);
 			}
 
@@ -51,31 +50,51 @@ void MinHashPair::setText(seqan::DnaString &sequence)
 	this->preprocessDone = false;
 }
 
-void MinHashPair::addMinSegmentToMap(DnaInfix &segment1, DnaInfix &segment2)
+void MinHashPair::addMinSegmentToMap(int segment1, int &segment2)
 {
-	findMinSegmentOfLengthM(segment1, segment2);
+	findMinSegmentOfLengthM(sequence, segment1, segment2);
 	addSegmentToMap(segment2);
 }
 
-void MinHashPair::findMinSegmentOfLengthM(DnaInfix &segment1, DnaInfix &segment2)
+void MinHashPair::findMinSegmentOfLengthM(const seqan::DnaString &text, int segment1, int &segment2)
 {
-	for (int i = 1; i <= N_MINUS_M; ++i, ++segment1.data_begin_position, ++segment1.data_end_position)
+	for (int i = 1; i <= N_MINUS_M; ++i, ++segment1)
 	{
-		minSegment(segment1, segment2);
+		minSegment(text, segment1, segment2);
 	}
 }
 
-void MinHashPair::minSegment(const DnaInfix &segment1, DnaInfix &segment2)
+void MinHashPair::minSegment(const seqan::DnaString &text, const int segment1, int &segment2)
 {
-	if (isLess(segment1, segment2))
+	if (isLessSegment(text, segment1, segment2))
 	{
 		segment2 = segment1;
 	}
 }
 
-void MinHashPair::addSegmentToMap(const DnaInfix &segment)
+bool MinHashPair::isLessSegment(const seqan::DnaString &text, int segment1, int segment2)
 {
-	map.insert(pair<int, int>(segmentToNumber(segment), segment.data_begin_position));
+	for (int end = segment1 + M; segment1 < end; ++segment1, ++segment2)
+	{
+		if (text[segment1].value < text[segment2].value)
+		{
+			return true;
+		}
+		else if (text[segment2].value < text[segment1].value)
+		{
+			return false;
+		}
+		else
+		{
+			continue;
+		}
+	}
+	return false;
+}
+
+void MinHashPair::addSegmentToMap(const int segment)
+{
+	map.insert(pair<int, int>(segmentToNumber(sequence, segment, segment + 13), segment));
 }
 
 void MinHashPair::spracuj()
@@ -109,11 +128,11 @@ void MinHashPair::findQueries(vector<seqan::DnaString> &queries, vector<deque<in
 
 void MinHashPair::findQuery(seqan::DnaString &query, deque<int> &out)
 {
-	DnaInfix queryMinSegment = DnaInfix(query, 0, M);
-	findMinSegmentOfLengthM(DnaInfix(query, 1, 1 + M), queryMinSegment);
-	int value = segmentToNumber(queryMinSegment);
+	int queryMinSegment = 0;
+	findMinSegmentOfLengthM(query, 1, queryMinSegment);
+	int value = segmentToNumber(query, queryMinSegment, queryMinSegment + M);
 
-	int begin = 1, end = pole.size()-1;
+	int begin = 1, end = pole.size() - 1;
 	int ix = (begin + end) >> 1;
 	while (begin <= end)
 	{
@@ -150,17 +169,17 @@ void MinHashPair::findQuery(seqan::DnaString &query, deque<int> &out)
 	}
 }
 
-int MinHashPair::isCorrect(seqan::DnaString &query, const int &beginSegment, const DnaInfix &queryMinSegment)
+int MinHashPair::isCorrect(seqan::DnaString &query, const int beginSegment, const int queryMinSegment)
 {
-	int begin = beginSegment - queryMinSegment.data_begin_position;
-	for (int i = 0, j = begin; i < queryMinSegment.data_begin_position; ++i, ++j)
+	int begin = beginSegment - queryMinSegment;
+	for (int i = 0, j = begin; i < queryMinSegment; ++i, ++j)
 	{
 		if (query[i].value != sequence[j].value)
 		{
 			return -1;
 		}
 	}
-	for (int i = queryMinSegment.data_end_position, j = beginSegment + M; i < N; ++i, ++j)
+	for (int i = queryMinSegment + M, j = beginSegment + M; i < N; ++i, ++j)
 	{
 		if (query[i].value != sequence[j].value)
 		{
@@ -170,12 +189,12 @@ int MinHashPair::isCorrect(seqan::DnaString &query, const int &beginSegment, con
 	return begin;
 }
 
-int MinHashPair::segmentToNumber(const DnaInfix &segment)
+int MinHashPair::segmentToNumber(const seqan::DnaString &segment, int index, int end)
 {
 	int result = 0;
-	for (int i = 0; i < M; i++)
+	for (; index < end; ++index)
 	{
-		switch (segment[i].value)
+		switch (segment[index].value)
 		{
 		case 1:
 			result++;
@@ -183,10 +202,12 @@ int MinHashPair::segmentToNumber(const DnaInfix &segment)
 			result <<= 2;
 			break;
 		case 3:
-			result++;
+			result <<= 2;
+			result += 6;
+			break;
 		case 2:
-			result <<= 1;
-			++result <<= 1;
+			result <<= 2;
+			result += 2;
 		}
 	}
 	return result;

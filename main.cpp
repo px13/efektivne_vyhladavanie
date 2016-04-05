@@ -10,7 +10,7 @@ int main()
 	io.readDnaString(text);
 	io = IOtool("/genome2.fasta");
 	io.readDnaString(text);
-	io = IOtool("/queries1m.fasta");
+	io = IOtool("/queries5m.fasta");
 	io.readQueries(queries);
 	time = getTime() - time;
 
@@ -19,16 +19,16 @@ int main()
 	cout << "Queries number: " << queries.size() << endl;
 	cout << "Time of data loading: " << time.count() << " ms" << endl;
 	cout << "====================" << endl;
-	
+
 	vector<deque<int>> result(queries.size());
-	
+
 	Benchmarker benchmark(text, queries, 10);
 
-	//benchmark.test(0, result);
-	//benchmark.test(3, result);
+	benchmark.test(0, result);
+	benchmark.test(3, result);
 	benchmark.test(4, result);
-	//benchmark.test(1, result);
-	//benchmark.test(2, result);
+	benchmark.test(1, result);
+	benchmark.test(2, result);
 
 	cin.get();
 	return 0;

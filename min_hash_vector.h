@@ -4,8 +4,6 @@
 
 using namespace std;
 
-typedef seqan::Infix<seqan::DnaString>::Type  DnaInfix;
-
 class MinHashVector
 {
 public:
@@ -27,15 +25,16 @@ private:
 	unordered_multimap<int, int> map;
 	vector<vector<int>> pole;
 
-	void addMinSegmentToMap(DnaInfix &segment1, DnaInfix &segment2);
-	void findMinSegmentOfLengthM(DnaInfix &segment1, DnaInfix &segment2);
-	void minSegment(const DnaInfix &segment1, DnaInfix &segment2);
-	void addSegmentToMap(const DnaInfix &segment);
+	void addMinSegmentToMap(int segment1, int &segment2);
+	void findMinSegmentOfLengthM(const seqan::DnaString &text, int segment1, int &segment2);
+	void minSegment(const seqan::DnaString &text, const int segment1, int &segment2);
+	bool isLessSegment(const seqan::DnaString &text, int segment1, int segment2);
+	void addSegmentToMap(const int segment);
 	void spracuj();
 
 	void findQueries(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
 	void findQuery(seqan::DnaString &query, deque<int> &out);
-	int isCorrect(seqan::DnaString &query, const int &beginSegment, const DnaInfix &queryMinSegment);
+	int isCorrect(seqan::DnaString &query, const int beginSegment, const int queryMinSegment);
 
-	int segmentToNumber(const DnaInfix &segment);
+	int segmentToNumber(const seqan::DnaString &segment, int index, int end);
 };
