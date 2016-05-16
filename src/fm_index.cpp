@@ -2,8 +2,8 @@
 
 FMIndex::FMIndex(seqan::DnaString &sequence)
 {
-	fmIndex = MyFMIndex(sequence);
-	fmFinder = MyFMFinder(fmIndex);
+	fmIndex = MyFMIndex1(sequence);
+	fmFinder = MyFMFinder1(fmIndex);
 }
 
 void FMIndex::prepare()
@@ -25,4 +25,3 @@ void FMIndex::query(vector<seqan::DnaString> &queries, vector<deque<int>> &out)
 		clear(fmFinder);
 	}
 }
-

@@ -48,7 +48,6 @@ seqan::DnaString IOtool::readDnaString(seqan::DnaString &out)
 
 void IOtool::readQueries(vector<seqan::DnaString> &out)
 {
-	deque<seqan::DnaString> temp;
 	if (readFromFile() == 0)
 	{
 		for (int i = 0; i < length(this->ids); ++i)
@@ -61,8 +60,6 @@ void IOtool::readQueries(vector<seqan::DnaString> &out)
 			out.push_back(query);
 		}	
 	}
-	out.reserve(temp.size());
-	copy(temp.begin(), temp.end(), back_inserter(out));
 }
 
 int IOtool::writeQueries(seqan::StringSet<seqan::DnaString> &queries)

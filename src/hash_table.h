@@ -14,10 +14,12 @@ public:
 
 	HashTable(seqan::DnaString &sequence = seqan::DnaString());
 
-	void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
+	//Creating index.
 	void prepare();
 
-	void setText(seqan::DnaString sequence);
+	//Searching queries and stores the result in the variable "out".
+	void query(vector<seqan::DnaString> &queries, vector<deque<int>> &out);
+
 private:
 
 	MyQIndex qIndex;

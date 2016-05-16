@@ -1,8 +1,6 @@
-#include "io_tool.cpp"
+#include "io_tool.h"
 
 using namespace std;
-
-typedef seqan::Infix<seqan::DnaString>::Type  DnaInfix;
 
 seqan::DnaString stringGenerator(int length)
 {
@@ -16,18 +14,26 @@ seqan::DnaString stringGenerator(int length)
 
 int main(int argc, char *argv[])
 {
-	if (argc < 4)
+	if (argc < 5)
 	{
 		return 1;
 	}
+	int n = 1;
+	if (sscanf(argv[1], "%d", &n) != 1)
+	{
+		cerr << "ERROR: Invalid length of queries.\n";
+		return 1;
+	}
 	int queriesNumber = 1;
-	if (sscanf(argv[1], "%d", &queriesNumber) != 1)
+	if (sscanf(argv[2], "%d", &queriesNumber) != 1)
 	{
 		cerr << "ERROR: Invalid number of queries.\n";
 		return 1;
 	}
+	cout << n << endl;
+	cout << queriesNumber << endl;
 	seqan::DnaString in;
-	for (int i = 2; i < argc - 1; i++)
+	for (int i = 3; i < argc - 1; i++)
 	{
 		IOtool io(argv[i]);
 		io.readDnaString(in);
@@ -35,11 +41,11 @@ int main(int argc, char *argv[])
 	seqan::StringSet<seqan::DnaString> queries;
 	for (int i = 0; i < queriesNumber / 2; i++)
 	{
-		appendValue(queries, stringGenerator(32));
+		appendValue(queries, stringGenerator(n));
 	}
 	for (int i = 0; i < queriesNumber / 2; i++)
 	{
-		appendValue(queries, infixWithLength(in, rand() % length(in), 32));
+		appendValue(queries, infixWithLength(in, rand() % (length(in) - n), n));
 	}
 	
 	IOtool io(argv[argc - 1]);
