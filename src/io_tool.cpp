@@ -9,10 +9,8 @@ IOtool::IOtool(char * file)
 
 int IOtool::readFromFile()
 {
-	seqan::CharString seqFileName = seqan::getAbsolutePath(this->file);
 	seqan::SeqFileIn seqFileIn;
-
-	if (!open(seqFileIn, seqan::toCString(seqFileName)))
+	if (!open(seqFileIn, file))
 	{
 		cerr << "ERROR: Could not open the file.\n";
 		return 1;
@@ -64,9 +62,8 @@ void IOtool::readQueries(vector<seqan::DnaString> &out)
 
 int IOtool::writeQueries(seqan::StringSet<seqan::DnaString> &queries)
 {
-	seqan::CharString seqFileName = seqan::getAbsolutePath(this->file);
 	seqan::SeqFileOut seqFileOut;
-	if (!open(seqFileOut, toCString(seqFileName)))
+	if (!open(seqFileOut, file))
 	{
 		cerr << "ERROR: Could not open the file.\n";
 		return 1;
