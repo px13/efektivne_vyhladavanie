@@ -3,7 +3,9 @@
 
 ### Examples of use.
 
-Reading sequences/queries from file.
+------------
+
+#### Reading sequences/queries from file.
 
 
 ```C++
@@ -43,7 +45,9 @@ benchmark.test(A, result, N, M); // A - algorithm number (0 - MinHash (UM), 1 - 
 
 #### Parameters to programs benchmark and querymaker. 
 
+```
 bechmark.exe A N M C PATH_1 [PATH_2, ...] PATH_N 
+```
 A - algorithm number
 N - queries length
 M - minimal substring length for MinHash
@@ -51,7 +55,9 @@ C - number of test cycles
 PATH_(1 - N-1) - paths to input sequences
 PATH_N - path to input queries
 
+```
 querymaker.exe N C PATH_1 [PATH_2, ...] PATH_N
+```
 N - queries length
 C - number of queries
 PATH_(1 - N-1) - paths to input sequences
